@@ -1,0 +1,49 @@
+mono_cflags = `pkg-config --cflags mono-2`
+cflags = -std=c2x -Dnullptr=NULL -Iinclude $mono_cflags
+libs = -lglfw -lm `pkg-config --libs mono-2`
+cc = clang -fdiagnostics-color
+cxx = clang++ -fdiagnostics-color
+cxxflags = -std=c++20 -Iinclude $mono_cflags
+csc = csc
+csflags = -langversion:9.0 -r:System.Numerics.Vectors.dll -r:System.Numerics.dll
+
+rule cc
+  command = $cc -c $in -o $out -MD -MF $out.d $cflags
+  depfile = $out.d
+
+rule cxx
+  command = $cxx -c $in -o $out -MD -MF $out.d $cxxflags
+  depfile = $out.d
+
+rule ld
+  command = $cxx $in -o $out $libs
+
+rule csc
+  command = $csc $in -t:library -out:$out -nologo $csflags
+
+build build/rain/camera.o: cc src/rain/camera.c
+build build/rain/main.o: cc src/rain/main.c
+build build/rain/renderer.o: cc src/rain/renderer.c
+build build/rain/sokol.o: cc src/rain/sokol.c
+build build/rain/texture.o: cc src/rain/texture.c
+build build/rain/transform.o: cc src/rain/transform.c
+build build/rain/window.o: cc src/rain/window.c
+build build/rain/interop.o: cc src/rain/interop.c
+build build/csrain/Test.dll: csc `find src/csrain -name '*.cs' | xargs`
+# build build/vendor/flecs.o: cc src/vendor/flecs.c
+`find src/vendor/imgui -name '*.cpp' \
+  | sed 's/src\/\(.*\)\.cpp/build build\/\1.o: cxx \0/gm'`
+
+build build/vendor/gl3w.o: cc src/vendor/gl3w.c
+build main: ld $
+  build/rain/camera.o $
+  build/rain/main.o $
+  build/rain/renderer.o $
+  build/rain/sokol.o $
+  build/rain/texture.o $
+  build/rain/transform.o $
+  build/rain/window.o $
+  build/rain/interop.o $
+  `find src/vendor/imgui -name '*.cpp' \
+    | sed 's/src\/\(.*\)\.cpp/build\/\1.o/' | xargs` $
+  build/vendor/gl3w.o | build/csrain/Test.dll

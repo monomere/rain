@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net4.6</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>9.0</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+		<Reference Include="System.Numerics.Vectors" />
+		<Reference Include="System.Numerics" />
+    <Reference Include="ImGui.NET" />
+		<!-- <Compile Include="**/*.cs" /> -->
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="ImGui.NET" Version="1.89.7.1" />
+  </ItemGroup>
+</Project>

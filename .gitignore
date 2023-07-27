@@ -1,0 +1,7 @@
+build.ninja
+build
+.cache
+compile_commands.json
+main
+mono_crash*
+.ninja_log
