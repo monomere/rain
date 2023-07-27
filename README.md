@@ -16,7 +16,7 @@ ninja
 ```
 
 **NB:**
-This runs arbitrary shell commands check the build.template.ninja file to ensure that there isn't any malicious commands being run. All that `gen.py` does is replace commands in backticks with the output of that command.
+This runs arbitrary shell commands, so check the build.template.ninja file to ensure that there isn't any malicious commands being run. All that `gen.py` does is replace commands in backticks with the output of that command. (TODO: wording)
 
 ## Running
 
