@@ -1,4 +1,6 @@
 
+using System;
+
 namespace RainEngine
 {
 	interface IApp
@@ -6,6 +8,7 @@ namespace RainEngine
 		void Entry();
 		void Update(float deltaTime);
 		void Render();
+		void Destroy();
 	}
 
 	static class Main
@@ -14,21 +17,55 @@ namespace RainEngine
 
 		static void Entry()
 		{
-			var cam = Renderer.Active!.ActiveCamera!;
-			cam.Position = new(5.0f, 0.0f, -3.0f);
-			cam.VerticalSize = 10.0f;
-
-			_App = new Editor();
+			try
+			{
+				_App = new Editor();
+				_App.Entry();
+			}
+			catch (Exception e)
+			{
+				Debug.Log($"EXCEPTION: {e}");
+				throw e;
+			}
 		}
 
 		static void Update(float deltaTime)
 		{
-			_App!.Update(deltaTime);
+			try
+			{
+				_App!.Update(deltaTime);
+			}
+			catch (Exception e)
+			{
+				Debug.Log($"EXCEPTION: {e}");
+				throw e;
+			}
 		}
 
 		static void Render()
 		{
-			_App!.Render();
+			try
+			{
+				_App!.Render();
+			}
+			catch (Exception e)
+			{
+				Debug.Log($"EXCEPTION: {e}");
+				throw e;
+			}
+		}
+
+		static void Destroy()
+		{
+			try
+			{
+				_App!.Destroy();
+			}
+			catch (Exception e)
+			{
+				Debug.Log($"EXCEPTION: {e}");
+				throw e;
+			}
 		}
 	}
 }

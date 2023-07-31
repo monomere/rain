@@ -13,7 +13,7 @@ namespace RainEngine
 			Framebuffer = framebuffer;
 			_Handle = RainNative.Interop.RenderPass_Alloc(
 				Framebuffer.ColorTexture._Handle,
-				Framebuffer.DepthTexture?._Handle ?? IntPtr.Zero
+				Framebuffer.DepthTexture._Handle
 			);
 		}
 

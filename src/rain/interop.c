@@ -47,35 +47,15 @@ static void RMIF_(Debug_Log)(MonoString *message) {
 	FIELD_TYPE rain_mi_Rain_##OBJ##_Get_##FIELD(OBJ_TYPE *o) { \
 		return o->FIELD; }
 
-
-// RAIN__MI_SETTERF_(Camera, struct rain_camera, HMM_Vec3*, position, rain_camera_set_position, *);
-// RAIN__MI_GETTERPF_(Camera, struct rain_camera, HMM_Vec3 , position);
-
-// RAIN__MI_SETTERF_(Camera, struct rain_camera, HMM_Quat*, rotation, rain_camera_set_rotation, *);
-// RAIN__MI_GETTERPF_(Camera, struct rain_camera, HMM_Quat , rotation);
-
-// RAIN__MI_SETTERF_(Camera, struct rain_camera, float, vert_size, rain_camera_set_vert_size);
-// RAIN__MI_GETTERF_(Camera, struct rain_camera, float, vert_size);
-
-// RAIN__MI_SETTERF_(Camera, struct rain_camera, float, fov, rain_camera_set_fov);
-// RAIN__MI_GETTERF_(Camera, struct rain_camera, float, fov);
-
-// RAIN__MI_SETTERF_(Camera, struct rain_camera, float, aspect, rain_camera_set_aspect);
-// RAIN__MI_GETTERF_(Camera, struct rain_camera, float, aspect);
-
-// RAIN__MI_SETTER_(Renderer, struct rain_renderer, struct rain_camera *, camera);
-// RAIN__MI_GETTER_(Renderer, struct rain_renderer, struct rain_camera *, camera);
-
 void RMIF_(Renderer_RenderColoredQuad)(
-	struct rain_renderer *o,
 	rain_float4 *ref_color,
 	rain_float4x4 *ref_trans
 ) {
-	rain_renderer_render_colored_quad(o, *ref_color, ref_trans);
-}
-
-struct rain_renderer *RMIF_(Engine_GetRenderer)(unsigned int id) {
-	return &rain__engine_.renderer;
+	rain_renderer_render_colored_quad(
+		&rain__engine_.renderer,
+		*ref_color,
+		ref_trans
+	);
 }
 
 struct rain_window *RMIF_(Engine_GetWindow)() {
@@ -166,7 +146,6 @@ void RMIF_(Window_SetFramebufferSize)(struct rain_window *o, rain_float2 *ref_si
 }
 
 static void RMIF_(Renderer_RenderTexturedQuad)(
-	struct rain_renderer *o,
 	struct rain_texture *tex,
 	sg_sampler samp,
 	uint64_t offsetX,
@@ -175,32 +154,48 @@ static void RMIF_(Renderer_RenderTexturedQuad)(
 	uint64_t height,
 	rain_float4x4 *trans
 ) {
-	rain_renderer_render_textured_quad(o, tex, samp, offsetX, offsetY, width, height, trans);
+	rain_renderer_render_textured_quad(
+		&rain__engine_.renderer,
+		tex, samp,
+		offsetX, offsetY,
+		width, height,
+		trans
+	);
 }
 
 static sg_sampler RMIF_(Renderer_GetBuiltinSampler)(
-	struct rain_renderer *o,
 	[[maybe_unused]] unsigned int id
 ) {
-	return o->builtin_.nearest_sampler;
+	return rain__engine_.renderer.builtin_.nearest_sampler;
 }
 
-static struct rain_renderer *RMIF_(Renderer_Alloc)() {
-	return calloc(1, sizeof(struct rain_renderer));
+struct rain__render_pass_ {
+	sg_pass pass;
+	struct rain_texture *color, *depth_stencil;
+};
+
+static struct rain__render_pass_ *RMIF_(RenderPass_Alloc)(
+	struct rain_texture *color,
+	struct rain_texture *depthStencil
+) {
+	struct rain__render_pass_ *r = calloc(1, sizeof(*r));
+	r->color = color;
+	r->depth_stencil = depthStencil;
+	r->pass = sg_make_pass(&(sg_pass_desc){
+		.color_attachments[0].image = r->color->image,
+		.depth_stencil_attachment.image = 
+			r->depth_stencil ? r->depth_stencil->image : (sg_image){}
+	});
+	return r;
 }
 
-static void RMIF_(Renderer_DestroyAndFree)(struct rain_renderer *o) {
-	rain_renderer_deinit(o);
+static void RMIF_(RenderPass_DestroyAndFree)(struct rain__render_pass_ *o) {
+	sg_destroy_pass(o->pass);
 	free(o);
 }
 
-struct RMIF_(RenderPass) {
-	sg_pass pass;
-};
-
 static void RMIF_(Renderer_BeginPass)(
-	struct rain_renderer *o,
-	struct RMIF_(RenderPass) *pass,
+	struct rain__render_pass_ *pass,
 	mono_bool clear,
 	rain_float4 *color
 ) {
@@ -211,14 +206,11 @@ static void RMIF_(Renderer_BeginPass)(
 		action.colors[0].clear_value.g = color->y;
 		action.colors[0].clear_value.b = color->z;
 		action.colors[0].clear_value.a = color->w;
-		action.depth.load_action = SG_LOADACTION_CLEAR;
-		action.depth.clear_value = 1.0f;
 	}
 	sg_begin_pass(pass->pass, &action);
 }
 
 static void RMIF_(Renderer_BeginDefaultPass)(
-	struct rain_renderer *o,
 	mono_bool clear,
 	rain_float4 *color
 ) {
@@ -229,24 +221,31 @@ static void RMIF_(Renderer_BeginDefaultPass)(
 		action.colors[0].clear_value.g = color->y;
 		action.colors[0].clear_value.b = color->z;
 		action.colors[0].clear_value.a = color->w;
-		action.depth.load_action = SG_LOADACTION_CLEAR;
-		action.depth.clear_value = 1.0f;
 	}
 	int width, height;
-	rain_window_get_fb_size(o->window, &width, &height);
+	rain_window_get_fb_size(&rain__engine_.window, &width, &height);
 	sg_begin_default_pass(&action, width, height);
 }
 
-static void RMIF_(Renderer_EndPass)(
-	struct rain_renderer *o
-) {
+static void RMIF_(Renderer_EndPass)() {
 	sg_end_pass();
 }
 
+struct RMIF_(ImGUI_Data) {
+	void *Context;
+	void *AllocFunc;
+	void *FreeFunc;
+};
+
 static void RMIF_(ImGUI_Init)(
-	unsigned long maxVertices
+	unsigned long maxVertices,
+	struct RMIF_(ImGUI_Data) *p
 ) {
-	rain_imgui_init(maxVertices);
+	struct rain_imgui_data data;
+	rain_imgui_init(maxVertices, &data);
+	p->Context = data.context;
+	p->AllocFunc = data.alloc_func;
+	p->FreeFunc = data.free_func;
 }
 
 static void RMIF_(ImGUI_DeInit)() {
@@ -261,18 +260,91 @@ static void RMIF_(ImGUI_EndRender)() {
 	rain_imgui_end_render();
 }
 
-static void RMIF_(ImGUI_Begin)(
+static mono_bool RMIF_(ImGUI_Begin)(
 	MonoString *name,
 	mono_bool *isOpen
 ) {
 	char *utf8_name = mono_string_to_utf8(name);
 	// bool should be smaller than int!
-	rain_imgui_begin(utf8_name, (bool*)isOpen);
+	bool ret = rain_imgui_begin(utf8_name, (bool*)isOpen);
 	mono_free(utf8_name);
+	return ret;
+}
+
+static mono_bool RMIF_(ImGUI_Button)(
+	MonoString *label
+) {
+	char *utf8_label = mono_string_to_utf8(label);
+	bool ret = rain_imgui_button(utf8_label);
+	mono_free(utf8_label);
+	return ret;
+}
+
+static void RMIF_(ImGUI_Label)(
+	MonoString *text
+) {
+	char *utf8_text = mono_string_to_utf8(text);
+	rain_imgui_label(utf8_text);
+	mono_free(utf8_text);
+}
+
+static void RMIF_(ImGUI_Image)(
+	struct rain_texture *texture,
+	float width, float height
+) {
+	rain_imgui_image(texture, width, height);
 }
 
 static void RMIF_(ImGUI_End)() {
 	rain_imgui_end();
+}
+
+static void RMIF_(ImGUI_Demo)() {
+	rain_imgui_demo();
+}
+
+#define RMIF_IMGUI_INPF_BIND(NAME, TO, TYPE) \
+	static void RMIF_(ImGUI_##NAME)(MonoString *label, TYPE *v) { \
+		char *utf8_label = mono_string_to_utf8(label); \
+		rain_imgui_##TO(utf8_label, v); \
+		mono_free(utf8_label); \
+	}
+#define RMIF_IMGUI_INPF_BIND2(NAME, TO, TYPE) \
+	static void RMIF_(ImGUI_##NAME)(MonoString *label, TYPE *v, float min, float max) { \
+		char *utf8_label = mono_string_to_utf8(label); \
+		rain_imgui_##TO(utf8_label, v, min, max); \
+		mono_free(utf8_label); \
+	}
+RMIF_IMGUI_INPF_BIND(DragFloat, drag_float, float);
+RMIF_IMGUI_INPF_BIND(DragFloat2, drag_float2, rain_float2);
+RMIF_IMGUI_INPF_BIND(DragFloat3, drag_float3, rain_float3);
+RMIF_IMGUI_INPF_BIND(DragFloat4, drag_float4, rain_float4);
+RMIF_IMGUI_INPF_BIND(InputFloat, input_float, float);
+RMIF_IMGUI_INPF_BIND(InputFloat2, input_float2, rain_float2);
+RMIF_IMGUI_INPF_BIND(InputFloat3, input_float3, rain_float3);
+RMIF_IMGUI_INPF_BIND(InputFloat4, input_float4, rain_float4);
+RMIF_IMGUI_INPF_BIND2(SliderFloat, slider_float, float);
+RMIF_IMGUI_INPF_BIND2(SliderFloat2, slider_float2, rain_float2);
+RMIF_IMGUI_INPF_BIND2(SliderFloat3, slider_float3, rain_float3);
+RMIF_IMGUI_INPF_BIND2(SliderFloat4, slider_float4, rain_float4);
+
+static mono_bool RMIF_(ImGUI_IsItemClicked)() {
+	return rain_imgui_is_item_clicked();
+}
+static mono_bool RMIF_(ImGUI_TreeNode)(
+	void *id,
+	mono_bool *selected,
+	MonoString *label
+) {
+	char *utf8_label = mono_string_to_utf8(label);
+	bool res = rain_imgui_tree_node(
+		id, (bool*)selected, utf8_label
+	);
+	mono_free(utf8_label);
+	return res;
+}
+static void RMIF_(ImGUI_TreePop)() {
+	rain_imgui_tree_pop();
 }
 
 void rain_bind_mono_interop(MonoDomain *domain) {
@@ -280,13 +352,16 @@ void rain_bind_mono_interop(MonoDomain *domain) {
 
 #define RAIN__ADD_ICALL_(NAME) \
 	mono_add_internal_call("RainNative.Interop::" #NAME, &RMIF_(NAME))
+
+#define RAIN__ADD_ICALL_ALIAS_(NAME, TO) \
+	mono_add_internal_call("RainNative.Interop::" #NAME, &RMIF_(TO))
+
+
 	RAIN__ADD_ICALL_(Debug_Log);
 
 	RAIN__ADD_ICALL_(Renderer_RenderColoredQuad);
 	RAIN__ADD_ICALL_(Renderer_RenderTexturedQuad);
 	RAIN__ADD_ICALL_(Renderer_GetBuiltinSampler);
-	RAIN__ADD_ICALL_(Renderer_Alloc);
-	RAIN__ADD_ICALL_(Renderer_DestroyAndFree);
 	RAIN__ADD_ICALL_(Renderer_BeginPass);
 	RAIN__ADD_ICALL_(Renderer_BeginDefaultPass);
 	RAIN__ADD_ICALL_(Renderer_EndPass);
@@ -305,9 +380,35 @@ void rain_bind_mono_interop(MonoDomain *domain) {
 	RAIN__ADD_ICALL_(Texture_GetSize);
 	RAIN__ADD_ICALL_(Texture_GetFormat);
 
+	RAIN__ADD_ICALL_(RenderPass_Alloc);
+	RAIN__ADD_ICALL_(RenderPass_DestroyAndFree);
+
+	RAIN__ADD_ICALL_(ImGUI_Init);
 	RAIN__ADD_ICALL_(ImGUI_DeInit);
 	RAIN__ADD_ICALL_(ImGUI_BeginRender);
 	RAIN__ADD_ICALL_(ImGUI_EndRender);
 	RAIN__ADD_ICALL_(ImGUI_Begin);
+	RAIN__ADD_ICALL_(ImGUI_Button);
+	RAIN__ADD_ICALL_(ImGUI_Label);
+	RAIN__ADD_ICALL_(ImGUI_Image);
 	RAIN__ADD_ICALL_(ImGUI_End);
+	RAIN__ADD_ICALL_(ImGUI_Demo);
+	RAIN__ADD_ICALL_(ImGUI_DragFloat);
+	RAIN__ADD_ICALL_(ImGUI_DragFloat2);
+	RAIN__ADD_ICALL_(ImGUI_DragFloat3);
+	RAIN__ADD_ICALL_(ImGUI_DragFloat4);
+	RAIN__ADD_ICALL_ALIAS_(ImGUI_DragFloat4q, ImGUI_DragFloat4);
+	RAIN__ADD_ICALL_(ImGUI_InputFloat);
+	RAIN__ADD_ICALL_(ImGUI_InputFloat2);
+	RAIN__ADD_ICALL_(ImGUI_InputFloat3);
+	RAIN__ADD_ICALL_(ImGUI_InputFloat4);
+	RAIN__ADD_ICALL_ALIAS_(ImGUI_InputFloat4q, ImGUI_InputFloat4);
+	RAIN__ADD_ICALL_(ImGUI_SliderFloat);
+	RAIN__ADD_ICALL_(ImGUI_SliderFloat2);
+	RAIN__ADD_ICALL_(ImGUI_SliderFloat3);
+	RAIN__ADD_ICALL_(ImGUI_SliderFloat4);
+	RAIN__ADD_ICALL_ALIAS_(ImGUI_SliderFloat4q, ImGUI_SliderFloat4);
+	RAIN__ADD_ICALL_(ImGUI_IsItemClicked);
+	RAIN__ADD_ICALL_(ImGUI_TreeNode);
+	RAIN__ADD_ICALL_(ImGUI_TreePop);
 }

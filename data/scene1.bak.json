@@ -1,0 +1,63 @@
+{
+  "name": "Scene 0",
+  "entities": [
+    {
+      "name": "j\u00F6ml",
+      "components": []
+    },
+    {
+      "name": "Player",
+      "components": [
+        {
+          "type": "RainEngine.TransformComponent",
+          "data": {
+            "$id": "1",
+            "position": {
+              "x": 0,
+              "y": 0,
+              "z": 0
+            },
+            "rotation": {
+              "isIdentity": true,
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 1
+            },
+            "scale": {
+              "x": 1,
+              "y": 1,
+              "z": 1
+            },
+            "parent": null
+          }
+        },
+        {
+          "type": "Player",
+          "data": {
+            "$id": "1",
+            "speed": 1
+          }
+        },
+        {
+          "type": "RainEngine.SpriteComponent",
+          "data": {
+            "$id": "1",
+            "color": {
+              "x": 0,
+              "y": 0,
+              "z": 0,
+              "w": 0
+            },
+            "sprite": {
+              "$id": "2",
+              "assetID": {
+                "raw": 1
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -114,8 +114,8 @@ void rain_renderer_init(
 		.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA,
 		.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
 		.op_rgb = SG_BLENDOP_ADD,
-		.src_factor_alpha = SG_BLENDFACTOR_ONE,
-		.dst_factor_alpha = SG_BLENDFACTOR_ZERO,
+		.src_factor_alpha = SG_BLENDFACTOR_ZERO,
+		.dst_factor_alpha = SG_BLENDFACTOR_ONE,
 		.op_alpha = SG_BLENDOP_ADD,
 	};
 
@@ -126,6 +126,7 @@ void rain_renderer_init(
 		.index_type = SG_INDEXTYPE_NONE,
 		.cull_mode = SG_CULLMODE_NONE,
 		.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+		.depth.pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL,
 		.colors[0].blend = blending
 	});
 
@@ -181,6 +182,7 @@ void rain_renderer_init(
 		.index_type = SG_INDEXTYPE_NONE,
 		.cull_mode = SG_CULLMODE_NONE,
 		.primitive_type = SG_PRIMITIVETYPE_TRIANGLE_STRIP,
+		.depth.pixel_format = SG_PIXELFORMAT_DEPTH_STENCIL,
 		.colors[0].blend = blending
 	});
 
@@ -215,18 +217,9 @@ void rain_renderer_begin_render(struct rain_renderer *this) {
 	// glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); no support in sokol :c
 	this->current_.bind = (sg_bindings){0};
 	this->current_.pipeline.id = SG_INVALID_ID;
-	int width, height;
-	rain_window_get_fb_size(this->window, &width, &height);
-	sg_begin_default_pass(&(sg_pass_action){
-		.colors[0] = {
-			.load_action = SG_LOADACTION_CLEAR,
-			.clear_value = { 0.1f, 0.2f, 0.3f, 1.0f },
-		}
-	}, width, height);
 }
 
 void rain_renderer_end_render(struct rain_renderer *this) {
-	sg_end_pass();
 	sg_commit();
 }
 

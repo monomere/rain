@@ -1,0 +1,9 @@
+{
+	"name": "Scene 0",
+	"entities": [
+		{
+			"name": "jöml",
+			"components": []
+		}
+	]
+}

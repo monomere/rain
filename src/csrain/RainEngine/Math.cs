@@ -17,11 +17,9 @@ namespace RainEngine
 	{
 		public ulong Width, Height;
 
-		public Extent2(ulong width, ulong height)
-		{
-			Width = width;
-			Height = height;
-		}
+		public Extent2(ulong width, ulong height) => (Width, Height) = (width, height);
+		public Vector2 ToVector() => new(Width, Height);
+		public override string ToString() => $"Extent2({Width}x{Height})";
 	}
 
 	public struct Rect2

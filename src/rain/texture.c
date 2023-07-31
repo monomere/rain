@@ -17,7 +17,7 @@ void rain_texture_from_file(
 		fprintf(stderr, "texture/ERR failed to load texture at '%s': %s\n",
 			path, stbi_failure_reason());
 	}
-	fprintf(stderr, "texture/INFO %dx%d @ %p\n", this->width, this->height, data);
+	// fprintf(stderr, "texture/INFO %dx%d @ %p\n", this->width, this->height, data);
 
 	sg_pixel_format pixel_format_map[] = {
 		0,

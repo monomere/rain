@@ -1,11 +1,19 @@
+@findall = find {1}  -name '*.{2}'
+@outall = @[findall {1} {2}] | sed 's/src\/\(.*\)\.{2}/build\/\1.o/gm'
+@buildall = @[findall {1} {2}] \
+  | sed 's/src\/\(.*\)\.{2}/build build\/\1.o: {3} \0/gm'
+
+# asan = -fsanitize=address,undefined
+
 mono_cflags = `pkg-config --cflags mono-2`
-cflags = -std=c2x -Dnullptr=NULL -Iinclude $mono_cflags
-libs = -lglfw -lm `pkg-config --libs mono-2`
-cc = clang -fdiagnostics-color
-cxx = clang++ -fdiagnostics-color
-cxxflags = -std=c++20 -Iinclude $mono_cflags
-csc = csc
-csflags = -langversion:9.0 -r:System.Numerics.Vectors.dll -r:System.Numerics.dll
+cflags = -std=c2x -Dnullptr=NULL -Iinclude $mono_cflags -g
+libs = -lglfw -lm `pkg-config --libs mono-2` -g
+cc = clang -fdiagnostics-color $asan
+cxx = clang++ -fdiagnostics-color $asan
+cxxflags = -std=c++20 -Iinclude $mono_cflags -g
+msbuild = msbuild
+# csasmrefs = -r:System.Numerics.Vectors.dll -r:System.Numerics.dll -r:System.Text.Json.dll
+# csflags = -langversion:9.0 -nullable $csasmrefs -debug -unsafe
 
 rule cc
   command = $cc -c $in -o $out -MD -MF $out.d $cflags
@@ -18,32 +26,18 @@ rule cxx
 rule ld
   command = $cxx $in -o $out $libs
 
-rule csc
-  command = $csc $in -t:library -out:$out -nologo $csflags
+rule msbuild
+  command = $msbuild $in -nologo -verbosity:q
 
-build build/rain/camera.o: cc src/rain/camera.c
-build build/rain/main.o: cc src/rain/main.c
-build build/rain/renderer.o: cc src/rain/renderer.c
-build build/rain/sokol.o: cc src/rain/sokol.c
-build build/rain/texture.o: cc src/rain/texture.c
-build build/rain/transform.o: cc src/rain/transform.c
-build build/rain/window.o: cc src/rain/window.c
-build build/rain/interop.o: cc src/rain/interop.c
-build build/csrain/Test.dll: csc `find src/csrain -name '*.cs' | xargs`
-# build build/vendor/flecs.o: cc src/vendor/flecs.c
-`find src/vendor/imgui -name '*.cpp' \
-  | sed 's/src\/\(.*\)\.cpp/build build\/\1.o: cxx \0/gm'`
+csout = src/csrain/bin/Debug/net4.6.2/csrain.dll
+build $csout: msbuild src/csrain | `@[findall src/csrain cs] | xargs`
+`@[buildall src/rain cpp cxx]`
+`@[buildall src/rain c cc]`
+`@[buildall src/vendor/imgui cpp cxx]`
 
 build build/vendor/gl3w.o: cc src/vendor/gl3w.c
 build main: ld $
-  build/rain/camera.o $
-  build/rain/main.o $
-  build/rain/renderer.o $
-  build/rain/sokol.o $
-  build/rain/texture.o $
-  build/rain/transform.o $
-  build/rain/window.o $
-  build/rain/interop.o $
-  `find src/vendor/imgui -name '*.cpp' \
-    | sed 's/src\/\(.*\)\.cpp/build\/\1.o/' | xargs` $
-  build/vendor/gl3w.o | build/csrain/Test.dll
+  `@[outall src/rain c] | xargs` $
+  `@[outall src/rain cpp] | xargs` $
+  `@[outall src/vendor/imgui cpp] | xargs` $
+  build/vendor/gl3w.o | $csout

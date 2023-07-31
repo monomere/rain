@@ -93,6 +93,6 @@ namespace RainEngine
 			return new(ProjectionType.Orthographic, fov, 0.0f, Window.Active.AspectRatio, near, far);
 		}
 
-		public static Camera? Active => Renderer.Active?.ActiveCamera;
+		public static Camera Active => Scene.Active.ActiveCamera;
 	}
 }

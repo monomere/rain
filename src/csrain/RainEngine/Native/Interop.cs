@@ -5,17 +5,19 @@ using RainEngine;
 
 namespace RainNative
 {
-	internal static class Interop
+	internal static unsafe class Interop
 	{
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		extern public static void Debug_Log(string m);
 	
 		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void Renderer_RenderColoredQuad(IntPtr p, ref Vector4 c, ref Matrix4x4 tr);
+		extern public static void Renderer_RenderColoredQuad(
+			ref Vector4 c,
+			ref Matrix4x4 tr
+		);
 		
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		extern public static void Renderer_RenderTexturedQuad(
-			IntPtr o, // struct rain_renderer *restrict this,
 			IntPtr tex, // const struct rain_texture *restrict texture,
 			UInt32 samp, // const struct sg_sampler sampler,
 			UInt64 offsetX,
@@ -32,31 +34,22 @@ namespace RainNative
 
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		extern public static UInt32 Renderer_GetBuiltinSampler(
-			IntPtr o,
 			uint id
 		);
 
-
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static IntPtr Renderer_Alloc();
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void Renderer_DestoryAndFree(IntPtr o);
-
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		extern public static IntPtr Renderer_BeginPass(
-			IntPtr o,
 			IntPtr pass,
 			bool clear,
 			ref Vector4 color
 		);
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		extern public static IntPtr Renderer_BeginDefaultPass(
-			IntPtr o,
 			bool clear,
 			ref Vector4 color
 		);
 		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void Renderer_EndPass(IntPtr o);
+		extern public static void Renderer_EndPass();
 
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		extern public static IntPtr RenderPass_Alloc(IntPtr color, IntPtr depthStencil);
@@ -109,6 +102,85 @@ namespace RainNative
 
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		extern public static int Texture_GetFormat(IntPtr o);
+
+		
+		public struct ImGUI_Data
+		{
+			public IntPtr Context;
+			public IntPtr AllocFunc, FreeFunc;
+		}
+
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_Init(ulong maxVertices, ImGUI_Data *p);
+		
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_DeInit();
+		
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_BeginRender();
+		
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_EndRender();
+		
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static bool ImGUI_Begin(
+			string name,
+			ref bool isOpen
+		);
+		
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static bool ImGUI_Button(string label);
+		
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static bool ImGUI_Image(
+			IntPtr texture, float width, float height
+		);
+		
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_Label(
+			string text
+		);
+		
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_End();
+		
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_Demo();
+
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_DragFloat(string l, ref float v);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_DragFloat2(string l, ref Vector2 v);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_DragFloat3(string l, ref Vector3 v);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_DragFloat4(string l, ref Vector4 v);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_DragFloat4q(string l, ref Quaternion v);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_InputFloat(string l, ref float v);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_InputFloat2(string l, ref Vector2 v);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_InputFloat3(string l, ref Vector3 v);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_InputFloat4(string l, ref Vector4 v);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_SliderFloat(string l, ref float v, float min, float max);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_SliderFloat2(string l, ref Vector2 v, float min, float max);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_SliderFloat3(string l, ref Vector3 v, float min, float max);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_SliderFloat4(string l, ref Vector4 v, float min, float max);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static bool ImGUI_IsItemClicked();
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static bool ImGUI_TreeNode(
+			object id, ref bool selected, string label
+		);
+		[MethodImpl(MethodImplOptions.InternalCall)]
+		extern public static void ImGUI_TreePop();
 	}
 
 	// copied from sokol jul 26 2023

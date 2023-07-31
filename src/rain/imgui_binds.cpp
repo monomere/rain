@@ -1,8 +1,10 @@
 #include <imgui.h>
+#include <stdio.h>
 #include "imgui_binds.h"
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 #include <sokol_gfx.h>
+#include <imgui_impl_glfw.h>
 
 extern "C" {
 #include "engine.h"
@@ -21,29 +23,21 @@ struct rain_imgui_ub {
 
 extern "C" {
 
-void rain_imgui_init(size_t max_vertices) {
+void rain_imgui_init(size_t max_vertices, struct rain_imgui_data *data) {
+	im_.max_vertices = max_vertices;
 	ImGui::CreateContext();
 	ImGui::StyleColorsDark();
 	ImGuiIO &io = ImGui::GetIO();
-	io.IniFilename = nullptr;
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	io.IniFilename = "data/imgui.ini";
 	io.Fonts->AddFontDefault();
-	io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
-	io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
-	io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
-	io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
-	io.KeyMap[ImGuiKey_DownArrow] = GLFW_KEY_DOWN;
-	io.KeyMap[ImGuiKey_Home] = GLFW_KEY_HOME;
-	io.KeyMap[ImGuiKey_End] = GLFW_KEY_END;
-	io.KeyMap[ImGuiKey_Delete] = GLFW_KEY_DELETE;
-	io.KeyMap[ImGuiKey_Backspace] = GLFW_KEY_BACKSPACE;
-	io.KeyMap[ImGuiKey_Enter] = GLFW_KEY_ENTER;
-	io.KeyMap[ImGuiKey_Escape] = GLFW_KEY_ESCAPE;
-	io.KeyMap[ImGuiKey_A] = GLFW_KEY_A;
-	io.KeyMap[ImGuiKey_C] = GLFW_KEY_C;
-	io.KeyMap[ImGuiKey_V] = GLFW_KEY_V;
-	io.KeyMap[ImGuiKey_X] = GLFW_KEY_X;
-	io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
-	io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
+	
+	// Do something about this being specific
+	// to GLFW. Should this be in `window`? nah.
+	ImGui_ImplGlfw_InitForOther(
+		*(GLFWwindow**)rain__engine_.window.handle,
+		true
+	);
 
 	// dynamic vertex- and index-buffers for imgui-generated geometry
 	sg_buffer_desc vbuf_desc = { };
@@ -67,7 +61,9 @@ void rain_imgui_init(size_t max_vertices) {
 	img_desc.height = font_height;
 	img_desc.pixel_format = SG_PIXELFORMAT_RGBA8;
 	img_desc.data.subimage[0][0] = sg_range{ font_pixels, size_t(font_width * font_height * 4) };
-	im_.bind.fs.images[0] = sg_make_image(&img_desc);
+	sg_image font_image = sg_make_image(&img_desc);
+
+	io.Fonts->SetTexID((void*)(uintptr_t)font_image.id);
 
 	sg_sampler_desc smp_desc = { };
 	smp_desc.wrap_u = SG_WRAP_CLAMP_TO_EDGE;
@@ -124,6 +120,15 @@ void rain_imgui_init(size_t max_vertices) {
 	pip_desc.colors[0].blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 	pip_desc.colors[0].write_mask = SG_COLORMASK_RGB;
 	im_.pipeline = sg_make_pipeline(&pip_desc);
+
+	data->context = ImGui::GetCurrentContext();
+	ImGui::GetAllocatorFunctions(
+		(ImGuiMemAllocFunc *)&data->alloc_func,
+		(ImGuiMemFreeFunc *)&data->free_func,
+		&data->user_ptr
+	);
+
+	fprintf(stderr, "ImGui version: %s\n", ImGui::GetVersion());
 }
 
 void rain_imgui_deinit() {
@@ -134,6 +139,7 @@ void rain_imgui_deinit() {
 	sg_destroy_shader(im_.shader);
 	sg_destroy_image(im_.bind.fs.images[0]);
 	sg_destroy_sampler(im_.bind.fs.samplers[0]);
+	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 }
 
@@ -145,6 +151,7 @@ void rain_imgui_begin_render() {
 	io.DisplaySize = ImVec2(float(width), float(height));
 	io.DeltaTime = (float) rain__engine_.delta_time;
 	ImGui::NewFrame();
+	ImGui::DockSpaceOverViewport();
 }
 
 static void imgui_draw_(ImDrawData *draw_data);
@@ -152,6 +159,9 @@ static void imgui_draw_(ImDrawData *draw_data);
 void rain_imgui_end_render() {
 	ImGui::Render();
 	imgui_draw_(ImGui::GetDrawData());
+	int width, height;
+	rain_window_get_fb_size(&rain__engine_.window, &width, &height);
+	sg_apply_scissor_rect(0, 0, width, height, true);
 }
 
 bool rain_imgui_begin(
@@ -159,6 +169,66 @@ bool rain_imgui_begin(
 	bool *is_open
 ) {
 	return ImGui::Begin(name, is_open);
+}
+
+bool rain_imgui_button(const char *label) {
+	return ImGui::Button(label);
+}
+
+void rain_imgui_label(const char *label) {
+	ImGui::Text("%s", label);
+}
+
+void rain_imgui_image(
+	const struct rain_texture *texture,
+	float width, float height
+) {
+	ImGui::Image((void*)(uintptr_t)texture->image.id, { width, height },
+		{ 0, 1 }, { 1, 0 });
+}
+
+#define INPUT_FUNC(NAME, TO, TYPE, ...) \
+	void rain_imgui_##NAME(const char *label, TYPE *value) { TO(label, __VA_ARGS__); }
+#define INPUT_FUNC2(NAME, TO, TYPE, ...) \
+	void rain_imgui_##NAME(const char *label, TYPE *value, float min, float max) \
+	{ TO(label, __VA_ARGS__); }
+
+INPUT_FUNC(drag_float, ImGui::DragFloat, float, value);
+INPUT_FUNC(drag_float2, ImGui::DragFloat2, rain_float2, &value->x);
+INPUT_FUNC(drag_float3, ImGui::DragFloat3, rain_float3, &value->x);
+INPUT_FUNC(drag_float4, ImGui::DragFloat4, rain_float4, &value->x);
+INPUT_FUNC(input_float, ImGui::InputFloat, float, value);
+INPUT_FUNC(input_float2, ImGui::InputFloat2, rain_float2, &value->x);
+INPUT_FUNC(input_float3, ImGui::InputFloat3, rain_float3, &value->x);
+INPUT_FUNC(input_float4, ImGui::InputFloat4, rain_float4, &value->x);
+INPUT_FUNC2(slider_float, ImGui::SliderFloat, float, value, min, max);
+INPUT_FUNC2(slider_float2, ImGui::SliderFloat2, rain_float2, &value->x, min, max);
+INPUT_FUNC2(slider_float3, ImGui::SliderFloat3, rain_float3, &value->x, min, max);
+INPUT_FUNC2(slider_float4, ImGui::SliderFloat4, rain_float4, &value->x, min, max);
+
+bool rain_imgui_tree_node(void *id, bool *selected, const char *label) {
+	int flags
+		= ImGuiTreeNodeFlags_OpenOnArrow
+		| ImGuiTreeNodeFlags_OpenOnDoubleClick
+		;
+	if (selected) flags |= ImGuiTreeNodeFlags_Selected;
+	return ImGui::TreeNodeEx(id, flags, "%s", label);
+}
+
+void rain_imgui_tree_pop() {
+	ImGui::TreePop();
+}
+
+bool rain_imgui_is_item_clicked() {
+	return ImGui::IsItemClicked();
+}
+
+void rain_imgui_input_text(const char *label, char *buf, size_t bufsize) {
+	ImGui::InputText(label, buf, bufsize);
+}
+
+void rain_imgui_demo() {
+	ImGui::ShowDemoWindow();
 }
 
 void rain_imgui_end() {
@@ -197,14 +267,18 @@ static void imgui_draw_(ImDrawData *draw_data) {
 
 		im_.bind.vertex_buffer_offsets[0] = vb_offset;
 		im_.bind.index_buffer_offset = ib_offset;
-		sg_apply_bindings(&im_.bind);
 
 		int base_element = 0;
+		sg_image last_image = { SG_INVALID_ID };
 		for (const ImDrawCmd &pcmd : cl->CmdBuffer) {
 			if (pcmd.UserCallback) {
 				pcmd.UserCallback(cl, &pcmd);
-			}
-			else {
+			} else {
+				sg_image img = { (uint32_t)(uintptr_t)pcmd.GetTexID() };
+				if (img.id != last_image.id) {
+					last_image = im_.bind.fs.images[0] = img;
+					sg_apply_bindings(&im_.bind);
+				}
 				const int scissor_x = int(pcmd.ClipRect.x);
 				const int scissor_y = int(pcmd.ClipRect.y);
 				const int scissor_w = int(pcmd.ClipRect.z - pcmd.ClipRect.x);

@@ -5,8 +5,8 @@
 #include <rain/renderer.h>
 
 extern struct rain_engine {
-	struct rain_renderer renderer;
 	struct rain_window window;
+	struct rain_renderer renderer;
 	float delta_time;
 } rain__engine_;
 

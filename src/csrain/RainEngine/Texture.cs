@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using System.Text.Json.Serialization;
 
 namespace RainEngine
 {
@@ -14,16 +15,26 @@ namespace RainEngine
 
 	public class Texture
 	{
-		public Extent2 Size { get; }
-		public TextureFormat Format { get; }
+		[JsonIgnore] public Extent2 Size { get; }
+		[JsonIgnore] public TextureFormat Format { get; }
+
+		public AssetID AssetID { get; }
 
 		internal IntPtr _Handle { get; }
 
-		internal Texture(IntPtr handle, Extent2 size, TextureFormat format)
+		[JsonConstructor]
+		internal Texture(AssetID assetID, IntPtr handle, Extent2 size, TextureFormat format)
 		{
-			this._Handle = handle;
-			this.Size = size;
-			this.Format = (TextureFormat)format;
+			_Handle = handle;
+			AssetID = assetID;
+			Size = size;
+			Format = (TextureFormat)format;
+		}
+
+		[JsonConstructor]
+		public Texture(AssetID assetID, TextureFormat format)
+		{
+			AssetID = assetID;
 		}
 
 		~Texture()
@@ -47,10 +58,10 @@ namespace RainEngine
 
 			IntPtr handle = RainNative.Interop.Texture_Alloc();
 			RainNative.Interop.Texture_Init(handle, ref desc);
-			return new(handle, size, TextureFormat.Unknown); // TODO: make texture format correct.
+			return new(AssetID.Empty, handle, size, TextureFormat.Unknown); // TODO: make texture format correct.
 		}
 
-		public static Texture FromFile(string path, TextureFormat format, bool dynamic = false)
+		public static Texture FromFile(AssetID assetID, string path, TextureFormat format, bool dynamic = false)
 		{
 			IntPtr handle = RainNative.Interop.Texture_Alloc();
 
@@ -65,7 +76,7 @@ namespace RainEngine
 
 			int actualFormat = RainNative.Interop.Texture_GetFormat(handle);
 
-			return new(handle, size, (TextureFormat)actualFormat);
+			return new(assetID, handle, size, (TextureFormat)actualFormat);
 		}
 	}
 }

@@ -7,7 +7,7 @@ namespace RainEngine
 	public class Window
 	{
 		internal IntPtr _Handle { get; }
-		public Input Input => new(_Handle);
+		// public Input Input => new(_Handle);
 
 		internal Window(IntPtr handle) { this._Handle = handle; }
 
@@ -23,8 +23,7 @@ namespace RainEngine
 		{
 			get
 			{
-				Vector2 r;
-				RainNative.Interop.Window_GetFramebufferSize(_Handle, out r);
+				RainNative.Interop.Window_GetFramebufferSize(_Handle, out Vector2 r);
 				return r;
 			}
 			set => RainNative.Interop.Window_SetFramebufferSize(_Handle, ref value);
