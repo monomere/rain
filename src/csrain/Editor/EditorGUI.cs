@@ -109,15 +109,48 @@ public class EditorGUI {
 		ImGuiUtil.DragFloatQ(GUIUtils.CamelToTitle(m.Name), ref value, DragSpeed, 0.0f, 0.0f, NumericFormat);
 	}
 
+	private Asset<Texture>? _OpenTextureSelector()
+	{
+		Asset<Texture>? ret = null;
+		if (ImGui.BeginPopupModal("Texture Selector"))
+		{
+			if (ImGui.Button("Cancel")) ImGui.CloseCurrentPopup();
+			if (ImGui.Button("Empty"))
+			{
+				ret = new(new(0));
+				ImGui.CloseCurrentPopup();
+			}
+			
+			foreach (var asset in AssetManager.Active.Assets)
+			{
+				if (ImGui.Button(asset.Value.Name))
+				{
+					ret = new(new(asset.Key));
+					ImGui.CloseCurrentPopup();
+				}
+			}
+			ImGui.EndPopup();
+		}
+		return ret;
+	}
+
 	private void _TextureAssetMemberEditor(ValueMember m, ref Asset<Texture> value, object _)
 	{
+		bool clicked;
 		if (value.Get() != null)
 		{
-			ImGuiUtil.ImageButton($"{m.Name}_ImageButton", value.Get()!, 64.0f);
+			clicked = ImGuiUtil.ImageButton($"{m.Name}_ImageButton", value.Get()!, 64.0f);
 		}
 		else
 		{
-			ImGui.Button("No Texture");
+			clicked = ImGui.Button("No Texture");
+		}
+
+		if (clicked) ImGui.OpenPopup("Texture Selector");
+
+		{
+			var selected = _OpenTextureSelector();
+			if (selected != null) value = selected;
 		}
 		
 		if (ImGui.BeginDragDropTarget())
@@ -136,7 +169,7 @@ public class EditorGUI {
 			ImGui.EndDragDropTarget();
 		}
 		int id = (int)value.ID.Raw;
-		ImGui.InputInt(GUIUtils.CamelToTitle(m.Name), ref id);
+		if (id != 0) ImGui.InputInt(GUIUtils.CamelToTitle(m.Name), ref id);
 		if (AssetManager.Active.Assets.ContainsKey((ulong)id))
 			value = new(new((ulong)id));
 	}

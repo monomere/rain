@@ -260,9 +260,6 @@ void rain_renderer_render_textured_quad(
 	if (r.width == 0) r.width = texture->width;
 	if (r.height == 0) r.height = texture->height;
 
-	fprintf(stderr, "tint: %p\n", tint);
-	fprintf(stderr, "   -> %f,%f,%f,%f\n",
-		tint->x, tint->y, tint->z, tint->w);
 	struct rain__ub_data_textured_quad_ info = {
 		.vs.quad.trans = *transform,
 		.vs.uvs = {
@@ -271,7 +268,9 @@ void rain_renderer_render_textured_quad(
 			.z = (r.width + r.offset_x) /(float) texture->width,
 			.w = (r.height + r.offset_y) /(float) texture->height,
 		},
-		.fs.tint = *tint // segfault (fault address: 0x0)
+		.fs.tint = {
+			tint->x, tint->y, tint->z, tint->w
+		}
 	};
 
 	rain___renderer_bind_pipeline(this, this->builtin_.textured_quad_pipeline);
