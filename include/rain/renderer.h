@@ -41,11 +41,19 @@ void rain_renderer_begin_render(struct rain_renderer *this_);
 /** end rendering a frame. */
 void rain_renderer_end_render(struct rain_renderer *this_);
 
+struct rain_renderer_rect {
+	size_t offset_x;
+	size_t offset_y;
+	size_t width;
+	size_t height;
+};
+
 void rain_renderer_render_textured_quad(
 	struct rain_renderer *RAIN_RESTRICT this_,
 	const struct rain_texture *RAIN_RESTRICT texture,
 	const struct sg_sampler sampler,
-	size_t offset_x, size_t offset_y, size_t width, size_t height,
+	const struct rain_renderer_rect *rect,
+	const rain_float4 *RAIN_RESTRICT tint,
 	const rain_float4x4 *RAIN_RESTRICT transform
 );
 

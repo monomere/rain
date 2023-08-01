@@ -29,15 +29,25 @@ namespace RainEngine
 		public static void RenderTexturedQuad(
 			Texture texture,
 			Rect2 rect,
+			Vector4 tint,
 			Matrix4x4 transform
 		)
 		{
+			var rectNative = new RainNative.Interop.Renderer_Rect
+			{
+				OffsetX = rect.X,
+				OffsetY = rect.Y,
+				Width = rect.Width,
+				Height = rect.Height
+			};
+
 			RainNative.Interop.Renderer_RenderTexturedQuad(
 				texture._Handle,
 				RainNative.Interop.Renderer_GetBuiltinSampler(
 					(uint)RainNative.Interop.BuiltinSamplerId.Nearest
 				),
-				rect.X, rect.Y, rect.Width, rect.Height,
+				ref rectNative,
+				ref tint,
 				ref transform
 			);
 		}

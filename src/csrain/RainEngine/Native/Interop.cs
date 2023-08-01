@@ -15,15 +15,18 @@ namespace RainNative
 			ref Vector4 c,
 			ref Matrix4x4 tr
 		);
+
+		public struct Renderer_Rect
+		{
+			public UInt64 OffsetX, OffsetY, Width, Height;
+		}
 		
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		extern public static void Renderer_RenderTexturedQuad(
 			IntPtr tex, // const struct rain_texture *restrict texture,
 			UInt32 samp, // const struct sg_sampler sampler,
-			UInt64 offsetX,
-			UInt64 offsetY,
-			UInt64 width,
-			UInt64 height,
+			ref Renderer_Rect rect,
+			ref Vector4 tint,
 			ref Matrix4x4 trans
 		);
 

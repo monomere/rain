@@ -47,6 +47,9 @@ struct rain__ub_data_textured_quad_ {
 		struct rain__ub_data_quad_ quad;
 		rain_float4 uvs;
 	} vs;
+	struct rain__ub_data_textured_quad_fs_ {
+		rain_float4 tint;
+	} fs;
 	struct rain__ub_data_textured_quad_bind_ {
 		uint32_t texture;
 	} bind;
@@ -164,13 +167,20 @@ void rain_renderer_init(
 				.image_slot = 0,
 				.sampler_slot = 0
 			},
+			.uniform_blocks[0] = {
+				.size = sizeof(struct rain__ub_data_textured_quad_fs_),
+				.uniforms = {
+					[0] = { .name = "u_tint", .type = SG_UNIFORMTYPE_FLOAT4 },
+				},
+			},
 			.source = 
 				"#version 330\n"
 				"uniform sampler2D u_texture;\n"
+				"uniform vec4 u_tint;\n"
 				"in vec2 s_uv;"
 				"out vec4 o_color;"
 				"void main() {\n"
-				"  o_color = texture(u_texture, s_uv);"
+				"  o_color = u_tint * texture(u_texture, s_uv);"
 				"}\n",
 		}
 	});
@@ -242,22 +252,27 @@ void rain_renderer_render_textured_quad(
 	struct rain_renderer *restrict this,
 	const struct rain_texture *restrict texture,
 	const struct sg_sampler sampler,
-	size_t offset_x, size_t offset_y, size_t width, size_t height,
+	const struct rain_renderer_rect *restrict rect,
+	const rain_float4 *restrict tint,
 	const rain_float4x4 *restrict transform
 ) {
-	if (width == 0) width = texture->width;
-	if (height == 0) height = texture->height;
+	struct rain_renderer_rect r = *rect;
+	if (r.width == 0) r.width = texture->width;
+	if (r.height == 0) r.height = texture->height;
 
+	fprintf(stderr, "tint: %p\n", tint);
+	fprintf(stderr, "   -> %f,%f,%f,%f\n",
+		tint->x, tint->y, tint->z, tint->w);
 	struct rain__ub_data_textured_quad_ info = {
 		.vs.quad.trans = *transform,
 		.vs.uvs = {
-			.x = offset_x /(float) texture->width,
-			.y = offset_y /(float) texture->height,
-			.z = (width + offset_x) /(float) texture->width,
-			.w = (height + offset_y) /(float) texture->height,
+			.x = r.offset_x /(float) texture->width,
+			.y = r.offset_y /(float) texture->height,
+			.z = (r.width + r.offset_x) /(float) texture->width,
+			.w = (r.height + r.offset_y) /(float) texture->height,
 		},
+		.fs.tint = *tint // segfault (fault address: 0x0)
 	};
-	// rain__renderer_compute_trans_matrix_(this, &info.vs.quad.trans, transform);
 
 	rain___renderer_bind_pipeline(this, this->builtin_.textured_quad_pipeline);
 	rain___renderer_bind_vertex_buffer(this, this->builtin_.quad_vertex_buffer);
@@ -271,8 +286,17 @@ void rain_renderer_render_textured_quad(
 		SG_SHADERSTAGE_VS,
 		0,
 		&(sg_range){
-			.ptr = (uint8_t*)&info + offsetof(struct rain__ub_data_colored_quad_, vs),
+			.ptr = (uint8_t*)&info + offsetof(struct rain__ub_data_textured_quad_, vs),
 			.size = sizeof(struct rain__ub_data_textured_quad_vs_)
+		}
+	);
+
+	sg_apply_uniforms(
+		SG_SHADERSTAGE_FS,
+		0,
+		&(sg_range){
+			.ptr = (uint8_t*)&info + offsetof(struct rain__ub_data_textured_quad_, fs),
+			.size = sizeof(struct rain__ub_data_textured_quad_fs_)
 		}
 	);
 

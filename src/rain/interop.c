@@ -145,20 +145,28 @@ void RMIF_(Window_SetFramebufferSize)(struct rain_window *o, rain_float2 *ref_si
 	fprintf(stderr, "rr/ERR setting window framebuffer size not supported.\n");
 }
 
+struct RMIF_(Renderer_Rect) {
+	uint64_t OffsetX, OffsetY, Width, Height;
+};
+
 static void RMIF_(Renderer_RenderTexturedQuad)(
 	struct rain_texture *tex,
 	sg_sampler samp,
-	uint64_t offsetX,
-	uint64_t offsetY,
-	uint64_t width,
-	uint64_t height,
+	struct RMIF_(Renderer_Rect) *rect,
+	rain_float4 *tint,
 	rain_float4x4 *trans
 ) {
+	struct rain_renderer_rect rect_ = {
+		.offset_x = rect->OffsetX,
+		.offset_y = rect->OffsetY,
+		.width = rect->Width,
+		.height = rect->Height
+	};
 	rain_renderer_render_textured_quad(
 		&rain__engine_.renderer,
 		tex, samp,
-		offsetX, offsetY,
-		width, height,
+		&rect_,
+		tint,
 		trans
 	);
 }

@@ -158,6 +158,7 @@ namespace RainEngine
 				Renderer.RenderTexturedQuad(
 					Sprite.Get()!,
 					new(),
+					Color,
 					Camera.Active.ComputeTransformMatrix(Transform!.GlobalTransform)
 				);
 			}
