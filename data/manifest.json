@@ -2,7 +2,92 @@
 	{
 		"id": 1,
 		"type": 0,
-		"path": "data/texture.png",
-		"format": 4
+		"name": "texture.png",
+		"format": 4,
+		"path": "data/texture.png"
+	},
+	{
+		"id": 2,
+		"type": 0,
+		"name": "icons/alert-triangle_1.png",
+		"format": 4,
+		"path": "data/icons/alert-triangle_1.png"
+	},
+	{
+		"id": 3,
+		"type": 0,
+		"name": "icons/play.png",
+		"format": 4,
+		"path": "data/icons/play.png"
+	},
+	{
+		"id": 4,
+		"type": 0,
+		"name": "icons/image.png",
+		"format": 4,
+		"path": "data/icons/image.png"
+	},
+	{
+		"id": 5,
+		"type": 0,
+		"name": "icons/maximize-2.png",
+		"format": 4,
+		"path": "data/icons/maximize-2.png"
+	},
+	{
+		"id": 6,
+		"type": 0,
+		"name": "icons/pause.png",
+		"format": 4,
+		"path": "data/icons/pause.png"
+	},
+	{
+		"id": 7,
+		"type": 0,
+		"name": "icons/box_1.png",
+		"format": 4,
+		"path": "data/icons/box_1.png"
+	},
+	{
+		"id": 8,
+		"type": 0,
+		"name": "icons/alert-circle.png",
+		"format": 4,
+		"path": "data/icons/alert-circle.png"
+	},
+	{
+		"id": 9,
+		"type": 0,
+		"name": "icons/file-text.png",
+		"format": 4,
+		"path": "data/icons/file-text.png"
+	},
+	{
+		"id": 10,
+		"type": 0,
+		"name": "icons/minimize-2.png",
+		"format": 4,
+		"path": "data/icons/minimize-2.png"
+	},
+	{
+		"id": 11,
+		"type": 0,
+		"name": "icons/music.png",
+		"format": 4,
+		"path": "data/icons/music.png"
+	},
+	{
+		"id": 12,
+		"type": 0,
+		"name": "icons/info.png",
+		"format": 4,
+		"path": "data/icons/info.png"
+	},
+	{
+		"id": 13,
+		"type": 0,
+		"name": "icons/folder.png",
+		"format": 4,
+		"path": "data/icons/folder.png"
 	}
 ]

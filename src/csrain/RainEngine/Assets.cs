@@ -113,13 +113,26 @@ namespace RainEngine
 
 		public static AssetManager Active { get; set; } = new();
 
-		public Dictionary<ulong, object> Assets = new();
+		public struct AssetInfo
+		{
+			public object Data;
+			public string Name;
+		}
+
+		public Dictionary<ulong, AssetInfo> Assets = new();
+		public Dictionary<string, ulong> AssetNames = new();
 
 		public T? Get<T>(AssetID id)
 		{
 			if (id.Raw == 0) return default(T);
-			if (Assets.ContainsKey(id.Raw)) return (T)Assets[id.Raw];
+			if (Assets.ContainsKey(id.Raw)) return (T)Assets[id.Raw].Data;
 			throw new Exception($"No such asset loaded: {id}.");
+		}
+
+		public T? Get<T>(string name)
+		{
+			if (AssetNames.ContainsKey(name)) return (T)Assets[AssetNames[name]].Data;
+			throw new Exception($"No such asset loaded: '{name}'.");
 		}
 
 		public void LoadAllFromManifestJson(JsonElement manifest)
@@ -128,12 +141,14 @@ namespace RainEngine
 			{
 				var type = (AssetType)assetJson.GetProperty("type").GetUInt32();
 				var id = new AssetID(assetJson.GetProperty("id").GetUInt64());
+				var name = assetJson.GetProperty("name").GetString()!;
 				if (Assets.ContainsKey(id.Raw))
 				{
 					throw new Exception($"Duplicate Asset ID: {id}");
 				}
 				var (obj, _) = Loaders[type].Load(id, assetJson);
-				Assets[id.Raw] = obj;
+				Assets[id.Raw] = new() { Data = obj, Name = name };
+				AssetNames[name] = id.Raw;
 			}
 		}
 
@@ -154,6 +169,8 @@ namespace RainEngine
 				throw new Exception($"Type '{type}' is not a subclass of Component");
 			return (Component)JsonSerializer.Deserialize(element.GetProperty("data"), type, new JsonSerializerOptions
 			{
+				ReferenceHandler = ReferenceHandler.Preserve,
+				IncludeFields = true,
 				PropertyNameCaseInsensitive = true,
 				Converters = { new AssetJsonConverter() }
 			})!;

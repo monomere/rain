@@ -13,20 +13,20 @@
           "data": {
             "$id": "1",
             "position": {
-              "x": 0,
-              "y": 0,
+              "x": -0.610537171,
+              "y": 0.512517214,
               "z": 0
             },
             "rotation": {
-              "isIdentity": false,
+              "isIdentity": true,
               "x": 0,
               "y": 0,
               "z": 0,
-              "w": 0
+              "w": 1
             },
             "scale": {
-              "x": 0,
-              "y": 0,
+              "x": 1,
+              "y": 1,
               "z": 0
             },
             "parent": null
@@ -36,7 +36,8 @@
           "type": "Player",
           "data": {
             "$id": "1",
-            "speed": 1
+            "speed": 1.32099998,
+            "readonly": 0.200000003
           }
         },
         {
@@ -44,10 +45,10 @@
           "data": {
             "$id": "1",
             "color": {
-              "x": 0,
-              "y": 0,
-              "z": 0,
-              "w": 0
+              "x": 1,
+              "y": 1,
+              "z": 1,
+              "w": 1
             },
             "sprite": {
               "id": 1

@@ -3,8 +3,10 @@ using System.Numerics;
 using ImGuiNET;
 
 namespace RainEngine {
-	public class ImGUI {
-		public ImGUI() {
+	public static class RainImGui
+	{
+		internal static void Init()
+		{
 			unsafe
 			{
 				RainNative.Interop.ImGUI_Data data;
@@ -16,86 +18,135 @@ namespace RainEngine {
 			}
 		}
 
-		~ImGUI() {
-			RainNative.Interop.ImGUI_DeInit();
-		}
+		internal static void DeInit() => RainNative.Interop.ImGUI_DeInit();
 
-		public bool Begin(string name) {
-			bool ignore = true;
-			return RainNative.Interop.ImGUI_Begin(name, ref ignore);
-		}
+		public static void BeginRender() => RainNative.Interop.ImGUI_BeginRender();
+		public static void EndRender() => RainNative.Interop.ImGUI_EndRender();
+	}
 
-		public void End() {
-			RainNative.Interop.ImGUI_End();
-		}
-
-		public bool Button(string label) {
-			return RainNative.Interop.ImGUI_Button(label);
-		}
-
-		public void Label(string label) {
-			RainNative.Interop.ImGUI_Label(label);
-		}
-
-		public void Image(Texture texture, Vector2 size) {
-			RainNative.Interop.ImGUI_Image(
-				texture._Handle,
-				size.X, size.Y
-			);
-		}
-
-		public void Demo() {
-			RainNative.Interop.ImGUI_Demo();
-		}
-
-		public void BeginRender() {
-			RainNative.Interop.ImGUI_BeginRender();
-		}
-
-		public void EndRender() {
-			RainNative.Interop.ImGUI_EndRender();
-		}
-
-		public void Drag(string label, ref float value)
-		{ RainNative.Interop.ImGUI_DragFloat(label, ref value); }
-		public void Drag(string label, ref Vector2 value)
-		{ RainNative.Interop.ImGUI_DragFloat2(label, ref value); }
-		public void Drag(string label, ref Vector3 value)
-		{ RainNative.Interop.ImGUI_DragFloat3(label, ref value); }
-		public void Drag(string label, ref Vector4 value)
-		{ RainNative.Interop.ImGUI_DragFloat4(label, ref value); }
-		public void Drag(string label, ref Quaternion value)
-		{ RainNative.Interop.ImGUI_DragFloat4q(label, ref value); }
-		public void Input(string label, ref float value)
-		{ RainNative.Interop.ImGUI_InputFloat(label, ref value); }
-		public void Input(string label, ref Vector2 value)
-		{ RainNative.Interop.ImGUI_InputFloat2(label, ref value); }
-		public void Input(string label, ref Vector3 value)
-		{ RainNative.Interop.ImGUI_InputFloat3(label, ref value); }
-		public void Input(string label, ref Vector4 value)
-		{ RainNative.Interop.ImGUI_InputFloat4(label, ref value); }
-		public void Slider(string label, ref float value, float min, float max)
-		{ RainNative.Interop.ImGUI_SliderFloat(label, ref value, min, max); }
-		public void Slider(string label, ref Vector2 value, float min, float max)
-		{ RainNative.Interop.ImGUI_SliderFloat2(label, ref value, min, max); }
-		public void Slider(string label, ref Vector3 value, float min, float max)
-		{ RainNative.Interop.ImGUI_SliderFloat3(label, ref value, min, max); }
-		public void Slider(string label, ref Vector4 value, float min, float max)
-		{ RainNative.Interop.ImGUI_SliderFloat4(label, ref value, min, max); }
-
-		public bool IsItemClicked()
-		{ return RainNative.Interop.ImGUI_IsItemClicked(); }
-
-		public bool TreeNode(
+	public static class ImGuiUtil
+	{
+		// NB: Defaults from ImGui v1.89.7-docking
+		public static bool DragFloatQ(
 			string label,
-			ref bool selected,
-			object id
-		) {
-			return RainNative.Interop.ImGUI_TreeNode(id, ref selected, label);
+			ref Quaternion v,
+			float v_speed = 1.0f,
+			float v_min = 0.0f,
+			float v_max = 0.0f,
+			string format = "%.3f",
+			ImGuiSliderFlags flags = 0
+		)
+		{
+			Vector4 t = v.ToVector4();
+			var res = ImGui.DragFloat4(label, ref t,
+				v_speed, v_min, v_max, format, flags);
+			v = t.ToQuaternion();
+			return res;
 		}
+		public static bool SliderFloatQ(
+			string label,
+			ref Quaternion v,
+			float v_min,
+			float v_max,
+			string format = "%.3f",
+			ImGuiSliderFlags flags = 0
+		)
+		{
+			Vector4 t = v.ToVector4();
+			var res = ImGui.SliderFloat4(label, ref t,
+				v_min, v_max, format, flags);
+			v = t.ToQuaternion();
+			return res;
+		}
+		public static bool InputFloatQ(
+			string label,
+			ref Quaternion v,
+			string format = "%.3f",
+			ImGuiInputTextFlags flags = 0
+		)
+		{
+			Vector4 t = v.ToVector4();
+			var res = ImGui.InputFloat4(label, ref t, format, flags);
+			v = t.ToQuaternion();
+			return res;
+		}
+		
+		public static void Image(Texture texture) =>
+			Image(texture, texture.Size.ToVector());
 
-		public void TreePop() {
-			RainNative.Interop.ImGUI_TreePop();
-		}
+		public static void Image(Texture texture, Vector2 size) =>
+			Image(texture, size, new(0, 1), new(1, 0));
+
+		public static void Image(
+			Texture texture,
+			Vector2 size,
+			Vector2 uv0,
+			Vector2 uv1
+		) => Image(texture, size, uv0, uv1, new(1, 1, 1, 1));
+
+		public static void Image(
+			Texture texture,
+			Vector2 size,
+			Vector2 uv0,
+			Vector2 uv1,
+			Vector4 tint_col
+		) => Image(texture, size, uv0, uv1, tint_col, new(0, 0, 0, 0));
+		
+		public static void Image(
+			Texture texture,
+			Vector2 size,
+			Vector2 uv0,
+			Vector2 uv1,
+			Vector4 tint_col,
+			Vector4 border_col
+		) => ImGui.Image(texture._Handle, size, uv0, uv1, tint_col, border_col);
+		
+		public static bool ImageButton(
+			string str_id,
+			Texture texture
+		) => ImageButton(str_id, texture, texture.Size.ToVector());
+
+		public static bool ImageButton(
+			string str_id,
+			Texture texture,
+			Vector2 size
+		) => ImageButton(str_id, texture, size, new(0, 1), new(1, 0));
+		
+		public static bool ImageButton(
+			string str_id,
+			Texture texture,
+			Vector2 size,
+			Vector2 uv0,
+			Vector2 uv1
+		) => ImageButton(str_id, texture, size, uv0, uv1, new(0, 0, 0, 0));
+
+		public static bool ImageButton(
+			string str_id,
+			Texture texture,
+			Vector2 size,
+			Vector2 uv0,
+			Vector2 uv1,
+			Vector4 bg_col
+		) => ImageButton(str_id, texture, size, uv0, uv1, bg_col, new(1, 1, 1, 1));
+
+		public static bool ImageButton(
+			string str_id,
+			Texture texture,
+			Vector2 size,
+			Vector2 uv0,
+			Vector2 uv1,
+			Vector4 bg_col,
+			Vector4 tint_col
+		) => ImGui.ImageButton(str_id, texture._Handle, size, uv0, uv1, bg_col, tint_col);
+
+		public static bool ImageButton(string str_id, Texture texture, float thumbnailSize) =>
+			ImageButton(
+				str_id,
+				texture,
+				new Vector2(
+					thumbnailSize * (texture.Size.Width /(float) texture.Size.Height),
+					thumbnailSize
+				)
+			);
 	}
 }

@@ -11,6 +11,8 @@ namespace RainEngine
 			Matrix4x4.Transpose(mat);
 		
 		public static Extent2 ToExtent(this Vector2 vec) => new((ulong)vec.X, (ulong)vec.Y);
+		public static Quaternion ToQuaternion(this Vector4 v) => new(v.X, v.Y, v.Z, v.W);
+		public static Vector4 ToVector4(this Quaternion q) => new(q.X, q.Y, q.Z, q.W);
 	}
 
 	public struct Extent2

@@ -17,6 +17,7 @@ namespace RainEngine
 
 		static void Entry()
 		{
+			RainImGui.Init();
 			try
 			{
 				_App = new Editor();
@@ -66,6 +67,7 @@ namespace RainEngine
 				Debug.Log($"EXCEPTION: {e}");
 				throw e;
 			}
+			RainImGui.DeInit();
 		}
 	}
 }

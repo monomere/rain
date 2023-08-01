@@ -93,6 +93,7 @@ namespace RainEngine
 		[JsonConstructor]
 		public TransformComponent(Vector3 position, Quaternion rotation, Vector3 scale) =>
 			(_Position, _Rotation, _Scale, Parent, _Clean) = (position, rotation, scale, null, false);
+		
 		[JsonIgnore]
 		public Matrix4x4 LocalTransform
 		{
@@ -138,18 +139,13 @@ namespace RainEngine
 		public Vector4 Color { get; set; }
 		public Asset<Texture> Sprite { get; set; }
 
-		public SpriteComponent() {
-			Sprite = new();
-		}
+		[JsonConstructor]
+		public SpriteComponent(Vector4 color, Asset<Texture> sprite) =>
+			(Color, Sprite) = (color, sprite);
 
-		public SpriteComponent(Vector4 color) {
-			Color = color;
-			Sprite = new();
-		}
+		public SpriteComponent(Vector4 color) : this(color, new()) {}
 
-		public SpriteComponent(Asset<Texture> sprite) {
-			Sprite = sprite;
-		}
+		public SpriteComponent(Asset<Texture> sprite) : this(new(1), sprite) {}
 
 		public override void OnCreate()
 		{

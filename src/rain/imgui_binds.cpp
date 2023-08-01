@@ -15,6 +15,8 @@ static struct rain_imgui {
 	sg_pipeline pipeline;
 	sg_shader shader;
 	size_t max_vertices;
+	/** NB: invalid. only stores sg_image. */
+	struct rain_texture font_rain_img;
 } im_;
 
 struct rain_imgui_ub {
@@ -61,9 +63,9 @@ void rain_imgui_init(size_t max_vertices, struct rain_imgui_data *data) {
 	img_desc.height = font_height;
 	img_desc.pixel_format = SG_PIXELFORMAT_RGBA8;
 	img_desc.data.subimage[0][0] = sg_range{ font_pixels, size_t(font_width * font_height * 4) };
-	sg_image font_image = sg_make_image(&img_desc);
+	im_.font_rain_img.image = sg_make_image(&img_desc);
 
-	io.Fonts->SetTexID((void*)(uintptr_t)font_image.id);
+	io.Fonts->SetTexID((void*)(uintptr_t)&im_.font_rain_img);
 
 	sg_sampler_desc smp_desc = { };
 	smp_desc.wrap_u = SG_WRAP_CLAMP_TO_EDGE;
@@ -152,6 +154,7 @@ void rain_imgui_begin_render() {
 	io.DeltaTime = (float) rain__engine_.delta_time;
 	ImGui::NewFrame();
 	ImGui::DockSpaceOverViewport();
+	ImGui::BeginDragDropSource();
 }
 
 static void imgui_draw_(ImDrawData *draw_data);
@@ -162,77 +165,6 @@ void rain_imgui_end_render() {
 	int width, height;
 	rain_window_get_fb_size(&rain__engine_.window, &width, &height);
 	sg_apply_scissor_rect(0, 0, width, height, true);
-}
-
-bool rain_imgui_begin(
-	const char *name,
-	bool *is_open
-) {
-	return ImGui::Begin(name, is_open);
-}
-
-bool rain_imgui_button(const char *label) {
-	return ImGui::Button(label);
-}
-
-void rain_imgui_label(const char *label) {
-	ImGui::Text("%s", label);
-}
-
-void rain_imgui_image(
-	const struct rain_texture *texture,
-	float width, float height
-) {
-	ImGui::Image((void*)(uintptr_t)texture->image.id, { width, height },
-		{ 0, 1 }, { 1, 0 });
-}
-
-#define INPUT_FUNC(NAME, TO, TYPE, ...) \
-	void rain_imgui_##NAME(const char *label, TYPE *value) { TO(label, __VA_ARGS__); }
-#define INPUT_FUNC2(NAME, TO, TYPE, ...) \
-	void rain_imgui_##NAME(const char *label, TYPE *value, float min, float max) \
-	{ TO(label, __VA_ARGS__); }
-
-INPUT_FUNC(drag_float, ImGui::DragFloat, float, value);
-INPUT_FUNC(drag_float2, ImGui::DragFloat2, rain_float2, &value->x);
-INPUT_FUNC(drag_float3, ImGui::DragFloat3, rain_float3, &value->x);
-INPUT_FUNC(drag_float4, ImGui::DragFloat4, rain_float4, &value->x);
-INPUT_FUNC(input_float, ImGui::InputFloat, float, value);
-INPUT_FUNC(input_float2, ImGui::InputFloat2, rain_float2, &value->x);
-INPUT_FUNC(input_float3, ImGui::InputFloat3, rain_float3, &value->x);
-INPUT_FUNC(input_float4, ImGui::InputFloat4, rain_float4, &value->x);
-INPUT_FUNC2(slider_float, ImGui::SliderFloat, float, value, min, max);
-INPUT_FUNC2(slider_float2, ImGui::SliderFloat2, rain_float2, &value->x, min, max);
-INPUT_FUNC2(slider_float3, ImGui::SliderFloat3, rain_float3, &value->x, min, max);
-INPUT_FUNC2(slider_float4, ImGui::SliderFloat4, rain_float4, &value->x, min, max);
-
-bool rain_imgui_tree_node(void *id, bool *selected, const char *label) {
-	int flags
-		= ImGuiTreeNodeFlags_OpenOnArrow
-		| ImGuiTreeNodeFlags_OpenOnDoubleClick
-		;
-	if (selected) flags |= ImGuiTreeNodeFlags_Selected;
-	return ImGui::TreeNodeEx(id, flags, "%s", label);
-}
-
-void rain_imgui_tree_pop() {
-	ImGui::TreePop();
-}
-
-bool rain_imgui_is_item_clicked() {
-	return ImGui::IsItemClicked();
-}
-
-void rain_imgui_input_text(const char *label, char *buf, size_t bufsize) {
-	ImGui::InputText(label, buf, bufsize);
-}
-
-void rain_imgui_demo() {
-	ImGui::ShowDemoWindow();
-}
-
-void rain_imgui_end() {
-	ImGui::End();
 }
 
 static void imgui_draw_(ImDrawData *draw_data) {
@@ -274,9 +206,9 @@ static void imgui_draw_(ImDrawData *draw_data) {
 			if (pcmd.UserCallback) {
 				pcmd.UserCallback(cl, &pcmd);
 			} else {
-				sg_image img = { (uint32_t)(uintptr_t)pcmd.GetTexID() };
-				if (img.id != last_image.id) {
-					last_image = im_.bind.fs.images[0] = img;
+				rain_texture *img = (rain_texture*)(void*)(uintptr_t)pcmd.GetTexID();
+				if (img->image.id != last_image.id) {
+					last_image = im_.bind.fs.images[0] = img->image;
 					sg_apply_bindings(&im_.bind);
 				}
 				const int scissor_x = int(pcmd.ClipRect.x);

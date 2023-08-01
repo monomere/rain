@@ -121,66 +121,6 @@ namespace RainNative
 		
 		[MethodImpl(MethodImplOptions.InternalCall)]
 		extern public static void ImGUI_EndRender();
-		
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static bool ImGUI_Begin(
-			string name,
-			ref bool isOpen
-		);
-		
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static bool ImGUI_Button(string label);
-		
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static bool ImGUI_Image(
-			IntPtr texture, float width, float height
-		);
-		
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_Label(
-			string text
-		);
-		
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_End();
-		
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_Demo();
-
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_DragFloat(string l, ref float v);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_DragFloat2(string l, ref Vector2 v);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_DragFloat3(string l, ref Vector3 v);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_DragFloat4(string l, ref Vector4 v);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_DragFloat4q(string l, ref Quaternion v);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_InputFloat(string l, ref float v);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_InputFloat2(string l, ref Vector2 v);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_InputFloat3(string l, ref Vector3 v);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_InputFloat4(string l, ref Vector4 v);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_SliderFloat(string l, ref float v, float min, float max);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_SliderFloat2(string l, ref Vector2 v, float min, float max);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_SliderFloat3(string l, ref Vector3 v, float min, float max);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_SliderFloat4(string l, ref Vector4 v, float min, float max);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static bool ImGUI_IsItemClicked();
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static bool ImGUI_TreeNode(
-			object id, ref bool selected, string label
-		);
-		[MethodImpl(MethodImplOptions.InternalCall)]
-		extern public static void ImGUI_TreePop();
 	}
 
 	// copied from sokol jul 26 2023

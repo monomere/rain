@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using System.Reflection;
 using System.Text;
@@ -37,7 +38,6 @@ class ValueMember
 	public ValueMember(MemberInfo info) => Info = info;
 
 	public string Name => Info.Name;
-	public string TitleCaseName => GUIUtils.CamelToTitle(Name);
 
 	public object GetValue(object obj) => Info switch
 	{
@@ -79,22 +79,81 @@ class ValueMember
 }
 
 public class EditorGUI {
-	private ImGUI _G;
 	private Entity? _Selected;
 
-	public EditorGUI(ImGUI gui) {
-		_G = gui;
+	public static float DragSpeed = 0.3f;
+	public static string NumericFormat = "%.3f";
 
-		AddMemberEditor<float>((ValueMember m, ref float value, object _) => _G.Drag(m.TitleCaseName, ref value));
-		AddMemberEditor<Vector2>((ValueMember m, ref Vector2 value, object _) => _G.Drag(m.TitleCaseName, ref value));
-		AddMemberEditor<Vector3>((ValueMember m, ref Vector3 value, object _) => _G.Drag(m.TitleCaseName, ref value));
-		AddMemberEditor<Vector4>((ValueMember m, ref Vector4 value, object _) => _G.Drag(m.TitleCaseName, ref value));
-		AddMemberEditor<Quaternion>((ValueMember m, ref Quaternion value, object _) => _G.Drag(m.TitleCaseName, ref value));
+	private static void DragFloat(ValueMember m, ref float value)
+	{
+		ImGui.DragFloat(GUIUtils.CamelToTitle(m.Name), ref value, DragSpeed, 0.0f, 0.0f, NumericFormat);
+	}
+
+	private static void DragFloat(ValueMember m, ref Vector2 value)
+	{
+		ImGui.DragFloat2(GUIUtils.CamelToTitle(m.Name), ref value, DragSpeed, 0.0f, 0.0f, NumericFormat);
+	}
+
+	private static void DragFloat(ValueMember m, ref Vector3 value)
+	{
+		ImGui.DragFloat3(GUIUtils.CamelToTitle(m.Name), ref value, DragSpeed, 0.0f, 0.0f, NumericFormat);
+	}
+
+	private static void DragFloat(ValueMember m, ref Vector4 value)
+	{
+		ImGui.DragFloat4(GUIUtils.CamelToTitle(m.Name), ref value, DragSpeed, 0.0f, 0.0f, NumericFormat);
+	}
+
+	private static void DragFloat(ValueMember m, ref Quaternion value)
+	{
+		ImGuiUtil.DragFloatQ(GUIUtils.CamelToTitle(m.Name), ref value, DragSpeed, 0.0f, 0.0f, NumericFormat);
+	}
+
+	private void _TextureAssetMemberEditor(ValueMember m, ref Asset<Texture> value, object _)
+	{
+		if (value.Get() != null)
+		{
+			ImGuiUtil.ImageButton($"{m.Name}_ImageButton", value.Get()!, 64.0f);
+		}
+		else
+		{
+			ImGui.Button("No Texture");
+		}
+		
+		if (ImGui.BeginDragDropTarget())
+		{
+			var payload = ImGui.AcceptDragDropPayload("AssetBrowserItem");
+			unsafe
+			{
+				if (payload.NativePtr != null)
+				{
+					var newId = *(ulong*)payload.Data;
+					var newAssetType = AssetManager.Active.Assets[newId].Data.GetType();
+					if (value.GetType().GenericTypeArguments[0].IsAssignableFrom(newAssetType))
+						value = new(new(newId));
+				}
+			}
+			ImGui.EndDragDropTarget();
+		}
+		int id = (int)value.ID.Raw;
+		ImGui.InputInt(GUIUtils.CamelToTitle(m.Name), ref id);
+		if (AssetManager.Active.Assets.ContainsKey((ulong)id))
+			value = new(new((ulong)id));
+	}
+
+	public EditorGUI()
+	{
+		AddMemberEditor<float>((ValueMember m, ref float value, object _) => DragFloat(m, ref value));
+		AddMemberEditor<Vector2>((ValueMember m, ref Vector2 value, object _) => DragFloat(m, ref value));
+		AddMemberEditor<Vector3>((ValueMember m, ref Vector3 value, object _) => DragFloat(m, ref value));
+		AddMemberEditor<Vector4>((ValueMember m, ref Vector4 value, object _) => DragFloat(m, ref value));
+		AddMemberEditor<Quaternion>((ValueMember m, ref Quaternion value, object _) => DragFloat(m, ref value));
+		AddMemberEditor<Asset<Texture>>(_TextureAssetMemberEditor);
 	}
 
 	private void RenderWindow(string name, Action content) {
-		if (_G.Begin(name)) content();
-		_G.End();
+		if (ImGui.Begin(name)) content();
+		ImGui.End();
 	}
 
 	public void Render() {
@@ -108,47 +167,153 @@ public class EditorGUI {
 		foreach (var entity in Scene.Active.Entities) {
 			bool isSelected = (_Selected == entity);
 
-			bool isOpen = _G.TreeNode(
-				$"Entity #{entity.Id}",
-				ref isSelected,
-				entity
+			bool isOpen = ImGui.TreeNodeEx(
+				new IntPtr(entity.Id),
+				isSelected ? ImGuiTreeNodeFlags.Selected : 0,
+				entity.Name
 			);
 
-			if (_G.IsItemClicked())
+			if (ImGui.IsItemClicked())
 			{
 				_Selected = entity;
 				Debug.Log("Selected new entity");
-				_SelectedComponent = null;
+				// _SelectedComponent = null;
 			}
 
 			if (isOpen)
 			{
-				_G.TreePop();
+				ImGui.TreePop();
 			}
 		}
 	}
 
+
+	private bool _FileLikeIconButton(
+		Texture thumbnail,
+		string name,
+		bool dragDrop = false,
+		string payloadType = "",
+		IntPtr payloadData = default(IntPtr),
+		uint payloadSize = 0
+	)
+	{
+		ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0, 0, 0, 0));
+
+		bool res = false;
+		ImGuiUtil.ImageButton($"{name}_ImageButton",
+			thumbnail, AssetBrowserThumbnailSize);
+
+		if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(0))
+		{
+			res = true;
+		}
+
+		ImGui.PopStyleColor();
+
+		if (dragDrop && ImGui.BeginDragDropSource())
+		{
+			ImGui.SetDragDropPayload(payloadType, payloadData, payloadSize);
+			ImGui.EndDragDropSource();
+		}
+
+		ImGui.TextWrapped($"{name}");
+		ImGui.NextColumn();
+
+		return res;
+	}
+
+	private int AssetBrowserPadding = 16;
+	private int AssetBrowserThumbnailSize = 72;
+
+	private string AssetBrowserCurrentPath = "";
+
 	private void AssetBrowser()
 	{
-		float padding = 16.0f;
-		float thumbnailSize = 128.0f;
-		float cellSize = thumbnailSize + padding;
+		float cellSize = AssetBrowserThumbnailSize + AssetBrowserPadding;
 
-		// float panelWidth = ImGui.GetContentRegionAvail().x;
-		// int columnCount = (int)(panelWidth / cellSize);
-		// if (columnCount < 1)
-		// 	columnCount = 1;
+		float panelWidth = ImGui.GetContentRegionAvail().X;
+		int columnCount = (int)(panelWidth / cellSize);
+		if (columnCount < 1) columnCount = 1;
 
-		// foreach (var asset in AssetManager.Active.Assets)
-		// {
 
-		// }
+		HashSet<string> directories = new();
+
+		foreach (var assetName in AssetManager.Active.AssetNames)
+		{
+			string dirname = Path.GetDirectoryName(assetName.Key);
+			if (directories.Contains(dirname) || dirname == "") continue;
+			string parentDirname = Path.GetDirectoryName(dirname);
+			if (parentDirname != AssetBrowserCurrentPath) continue;
+			directories.Add(dirname);
+		}
+
+		ImGui.Columns(columnCount, "#AssetBrowser", false);
+
+		if (AssetBrowserCurrentPath != "")
+			if (_FileLikeIconButton(
+				AssetManager.Active.Get<Texture>("icons/folder.png")!,
+				".."
+			))
+			{
+				AssetBrowserCurrentPath = Path.GetDirectoryName(AssetBrowserCurrentPath);
+				return;
+			}
+
+		foreach (var directory in directories)
+		{
+			if (_FileLikeIconButton(
+				AssetManager.Active.Get<Texture>("icons/folder.png")!,
+				directory
+			))
+			{
+				AssetBrowserCurrentPath = directory;
+				return;
+			}
+		}
+
+		foreach (var asset in AssetManager.Active.Assets)
+		{
+			string dirname = Path.GetDirectoryName(asset.Value.Name);
+			string filename = Path.GetFileName(asset.Value.Name);
+			if (dirname != AssetBrowserCurrentPath) continue;
+
+			Texture thumbnail;
+			if (asset.Value.Data.GetType() == typeof(Texture))
+			{
+				thumbnail = (Texture)asset.Value.Data;
+			}
+			else
+			{
+				thumbnail = AssetManager.Active.Get<Texture>("icons/image.png")!;
+			}
+
+			IntPtr data;
+			unsafe
+			{
+				ulong id = asset.Key;
+				data = new(&id);
+			}
+
+			_FileLikeIconButton(
+				thumbnail,
+				filename,
+				true,
+				"AssetBrowserItem",
+				data,
+				sizeof(ulong)
+			);
+		}
+
+		// ImGui.SliderInt("Thumbnail Size", ref assetBrowserThumbnailSize, 16, 512);
+		// ImGui.SliderInt("Padding", ref assetBrowserPadding, 0, 32);
 	}
 
 	private void _MemberEditor(ValueMember valueMember, object component)
 	{
 		if (!_MemberEditors.ContainsKey(valueMember.ValueType)) return;
+		ImGui.BeginDisabled(!valueMember.IsWriteable);
 		_MemberEditors[valueMember.ValueType](valueMember, component);
+		ImGui.EndDisabled();
 	}
 
 	private Dictionary<Type, Action<ValueMember, object>> _MemberEditors = new();
@@ -158,8 +323,6 @@ public class EditorGUI {
 	void AddMemberEditor<T>(MemberEditor<T> editor) =>
 		_MemberEditors.Add(typeof(T), (valueMember, component) =>
 		{
-			if (!valueMember.IsWriteable) _G.Label("Readonly");
-
 			var value = (T)valueMember.GetValue(component);
 
 			editor(valueMember, ref value, component);
@@ -167,24 +330,28 @@ public class EditorGUI {
 			if (valueMember.IsWriteable) valueMember.SetValue(component, value!);
 		});
 
-	private int? _SelectedComponent;
 	private void Inspector()
 	{
+		if (_Selected?.Scene != Scene.Active) _Selected = null;
 		if (_Selected != null) {
-			_G.Label($"Entity #{_Selected.Id}: {_Selected.Name}");
+			ImGui.Text($"Entity #{_Selected.Id}: {_Selected.Name}");
 
 			for (int i = 0; i < _Selected.Components.Count; ++i) {
+				var flags = ImGuiTreeNodeFlags.DefaultOpen;
+
 				var component = _Selected.Components[i];
-				bool isSelected = (_SelectedComponent == i);
-				var isOpen = _G.TreeNode(
-					component.GetType().Name,
-					ref isSelected,
-					component
+				// bool isSelected = (_SelectedComponent == i);
+
+				// if (isSelected) flags |= ImGuiTreeNodeFlags.Selected;
+				
+				var isOpen = ImGui.TreeNodeEx(
+					new IntPtr(i),
+					flags,
+					component.GetType().Name
 				);
-				if (_G.IsItemClicked())
-				{
-					_SelectedComponent = i;
-				}
+
+				// if (ImGui.IsItemClicked()) _SelectedComponent = i;
+
 				if (isOpen)
 				{
 					var members = component.GetType().GetMembers();
@@ -196,12 +363,12 @@ public class EditorGUI {
 
 						_MemberEditor(valueMember, component);
 					}
-					_G.TreePop();
+					ImGui.TreePop();
 				}
 			}
 		} else {
-			_SelectedComponent = null;
-			_G.Label("Nothing Selected.");
+			// _SelectedComponent = null;
+			ImGui.TextDisabled("Nothing Selected.");
 		}
 	}
 }

@@ -6,7 +6,6 @@ class Editor : IApp
 {
 	private Framebuffer _GameFramebuffer;
 	private RenderPass _GameRenderPass;
-	private ImGUI _ImGUI;
 	private EditorGUI _GUI;
 
 	public bool IsPlaying = false;
@@ -19,17 +18,19 @@ class Editor : IApp
 		_GameRenderPass = new(_GameFramebuffer);
 
 		AssetManager.Active.LoadAllFromManifestFile("data/manifest.json");
+		ReloadScene();
+		_GUI = new();
+	}
+
+	public void ReloadScene()
+	{
 		SceneManager.ActiveScene = SceneAsset.BuildFromFile("data/scene1.json");
 		// Scene.Active.CreateEntity("Player",
 		// 	new TransformComponent(),
 		// 	new Player(),
 		// 	new SpriteComponent(AssetManager.Active.Get<Texture>(new(1)))
 		// );
-		var transform = Scene.Active.Entities[1].GetComponent<TransformComponent>()!;
-		// Debug.Log($"{transform._Clean}");
 		Camera.Active.Position = new(0.0f, 0.0f, -3.0f);
-		_ImGUI = new();
-		_GUI = new(_ImGUI);
 	}
 
 	public void Entry()
@@ -38,18 +39,24 @@ class Editor : IApp
 
 	private void StartPlaying()
 	{
+		IsPlaying = true;
 		Scene.Active.OnCreate();
 	}
 
 	private void StopPlaying()
 	{
+		IsPlaying = false;
 		// Scene.Active.OnDestroy();
+		ReloadScene();
 	}
+
+	private bool _ViewportWasFocused = false;
 
 	public void Update(float deltaTime)
 	{
 		if (IsPlaying)
 		{
+			Input.KeyboardCaptured = !_ViewportWasFocused;
 			Scene.Active.OnUpdate(deltaTime);
 		}
 	}
@@ -62,27 +69,34 @@ class Editor : IApp
 		Renderer.EndPass();
 
 		Renderer.BeginPass(new(0.5f, 0.4f, 0.3f, 1.0f));
-		_ImGUI.BeginRender();
-		
-		if (_ImGUI.Begin("Viewport"))
+		RainImGui.BeginRender();
+
+		if (ImGui.BeginMainMenuBar())
 		{
-			_ImGUI.Image(
-				_GameFramebuffer.ColorTexture,
-				_GameFramebuffer.ColorTexture.Size.ToVector()
-			);
+			ImGui.MenuItem("File");
+			ImGui.MenuItem("Edit");
+			ImGui.EndMainMenuBar();
 		}
-		_ImGUI.End();
-
-		_GUI.Render();
-		_ImGUI.Demo();
-
-		if (ImGui.Begin("Hello"))
+		
+		if (ImGui.Begin("Viewport"))
 		{
-			ImGui.Text("what");
+			_ViewportWasFocused = ImGui.IsWindowFocused();
+			var icon = AssetManager.Active.Get<Texture>(
+				IsPlaying ? "icons/pause.png" : "icons/play.png"
+			)!;
+			if (ImGuiUtil.ImageButton("PlayButton", icon, new Vector2(16, 16)))
+			{
+				if (IsPlaying) StopPlaying();
+				else StartPlaying();
+			}
+			ImGuiUtil.Image(_GameFramebuffer.ColorTexture);
 		}
 		ImGui.End();
 
-		_ImGUI.EndRender();
+		ImGui.ShowDemoWindow();
+		_GUI.Render();
+
+		RainImGui.EndRender();
 
 		Renderer.EndPass();
 	}

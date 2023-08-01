@@ -4,6 +4,7 @@ using RainEngine;
 class Player : Component
 {
 	public float Speed = 1.0f;
+	public readonly float Readonly = 0.2f;
 
 	public override void OnCreate()
 	{
